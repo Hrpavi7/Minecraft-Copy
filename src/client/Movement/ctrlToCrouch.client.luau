@@ -16,10 +16,12 @@ end
 
 player.CharacterAdded:Connect(setupCharacter)
 
-local slowing = false
+local _slowing = false
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
+	if gameProcessedEvent then
+		return
+	end
 
 	if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
 		local character = player.Character
@@ -27,14 +29,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 			local humanoid = character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				humanoid.WalkSpeed = slowSpeed
-				slowing = true
+				_slowing = true
 			end
 		end
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
+	if gameProcessedEvent then
+		return
+	end
 
 	if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
 		local character = player.Character
@@ -42,7 +46,7 @@ UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
 			local humanoid = character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				humanoid.WalkSpeed = normalWalkSpeed
-				slowing = false
+				_slowing = false
 			end
 		end
 	end

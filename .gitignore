@@ -4,7 +4,10 @@
 # Roblox Studio lock files
 /*.rbxlx.lock
 /*.rbxl.lock
+# Folders and Files
 Packages/
 ServerPackages/
+.git/
 sourcemap.json
 wally.lock
+IMPORTANT.md

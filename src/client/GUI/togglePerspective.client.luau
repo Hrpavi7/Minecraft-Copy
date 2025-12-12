@@ -1,18 +1,11 @@
--- 🔄 FIXED Third Person Toggle (F5) - Works MULTIPLE TIMES!
--- LocalScript for StarterPlayer > StarterPlayerScripts
--- ✅ Toggles First ↔ LOCKED Third Person (fixed distance like Minecraft)
--- ✅ ContextActionService = Bypasses Studio F5 conflicts!
--- ✅ Respawn-safe + Snaps camera instantly
--- ✅ Test: Play → F5 spam! (Studio: May need published game for perfect F5)
-
 local Players = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
-local UserInputService = game:GetService("UserInputService")  -- Fallback
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
-local isThirdPerson = true  -- Start in third (Minecraft default)
-local thirdDistance = 16  -- Fixed third person distance (tweak 12-24 for feel)
+local isThirdPerson = false
+local thirdDistance = 16
 
 local function setThirdPerson()
 	player.CameraMode = Enum.CameraMode.Classic
@@ -32,9 +25,9 @@ local function setCameraMode()
 	end
 end
 
--- Setup on spawn/respawn
 local function onCharacterAdded(character)
-	wait(0.2)  -- Let camera init
+	-- Wait slightly to ensure the character's camera properties are ready
+	task.wait(0.2)
 	setCameraMode()
 end
 
@@ -43,7 +36,6 @@ if player.Character then
 end
 player.CharacterAdded:Connect(onCharacterAdded)
 
--- PRIMARY: ContextActionService (sinks F5, works in Studio/game)
 ContextActionService:BindAction("ToggleCamera", function(actionName, inputState, inputObject)
 	if inputState == Enum.UserInputState.Begin then
 		isThirdPerson = not isThirdPerson
@@ -51,13 +43,12 @@ ContextActionService:BindAction("ToggleCamera", function(actionName, inputState,
 	end
 end, false, Enum.KeyCode.F5)
 
--- FALLBACK: UserInputService (if CAS fails in rare cases)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
+	if gameProcessed then
+		return
+	end
 	if input.KeyCode == Enum.KeyCode.F5 then
 		isThirdPerson = not isThirdPerson
 		setCameraMode()
 	end
 end)
-
-print("🎮 F5 Toggle loaded! Spam F5 to test.")

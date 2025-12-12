@@ -1,58 +1,61 @@
+--[[
+	Hi, if you're here, god knows why this works.
+	Warning: DO NOT TRY TO ORGANIZE THIS.
+	This is a terrible code, and I regretted making this.
+	put how much hours you wasted to a warning to the next guy who sees this:
+
+	total_wasted_hours_here: 6
+--]]
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContextActionService = game:GetService("ContextActionService")
+local _ContextActionService = game:GetService("ContextActionService")
 
--- 1. Setup & Variables
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 local camera = workspace.CurrentCamera
 local playerGui = player:WaitForChild("PlayerGui")
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
--- Ensure these RemoteEvents exist in ReplicatedStorage!
 local breakRemote = remotes:WaitForChild("BreakBlock")
 local placeRemote = remotes:WaitForChild("PlaceBlock")
 
 local BLOCK_SIZE = 4
 local MAX_DIST = 100
 
--- Block Configuration
 local BLOCK_DATA = {
-	Grass = {hardness = 0.5, material = Enum.Material.Grass, color = Color3.fromRGB(102, 153, 0)},
-	Dirt = {hardness = 0.7, material = Enum.Material.Mud, color = Color3.fromRGB(139, 69, 19)},
-	Stone = {hardness = 1.8, material = Enum.Material.Rock, color = Color3.fromRGB(112, 112, 112)},
-	Wood = {hardness = 1.2, material = Enum.Material.Wood, color = Color3.fromRGB(162, 87, 0)},
+	Grass = { hardness = 0.5, material = Enum.Material.Grass, color = Color3.fromRGB(102, 153, 0) },
+	Dirt = { hardness = 0.7, material = Enum.Material.Mud, color = Color3.fromRGB(139, 69, 19) },
+	Stone = { hardness = 1.8, material = Enum.Material.Rock, color = Color3.fromRGB(112, 112, 112) },
+	Wood = { hardness = 1.2, material = Enum.Material.Wood, color = Color3.fromRGB(162, 87, 0) },
 }
 
--- Inventory Setup (Fallback if _G isn't set)
-local inventory = _G.MyInventory or {
-	{name = "Grass", count = 64},
-	{name = "Dirt", count = 64},
-	{name = "Stone", count = 64},
-	{name = "Wood", count = 64},
-	{name = "Stone", count = 64},
-} 
+local inventory = _G.MyInventory
+	or {
+		{ name = "Grass", count = 64 },
+		{ name = "Dirt", count = 64 },
+		{ name = "Stone", count = 64 },
+		{ name = "Wood", count = 64 },
+		{ name = "Stone", count = 64 },
+	}
 local selectedSlot = 1
 
--- State Variables
 local previewPart = nil
 local breaking = false
 local breakStartTime = 0
-local breakTarget = nil -- Vector3
-local lastHit = nil -- {pos, normal}
+local breakTarget = nil
+local lastHit = nil
 local mouseDown = false
 local lastMousePos = nil
 local sensitivity = 0.2
 
--- 2. GUI Creation
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MinecraftGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Crosshair
 local crosshair = Instance.new("TextLabel")
 crosshair.Size = UDim2.new(0, 40, 0, 40)
 crosshair.Position = UDim2.new(0.5, -20, 0.5, -20)
@@ -65,7 +68,6 @@ crosshair.Visible = false
 crosshair.ZIndex = 10
 crosshair.Parent = screenGui
 
--- Breaking HUD
 local breakLabel = Instance.new("TextLabel")
 breakLabel.Name = "BreakLabel"
 breakLabel.Size = UDim2.new(0, 220, 0, 30)
@@ -78,7 +80,6 @@ breakLabel.Text = ""
 breakLabel.Visible = false
 breakLabel.Parent = screenGui
 
--- Hotbar Frame
 local hotbarFrame = Instance.new("Frame")
 hotbarFrame.Name = "Hotbar"
 hotbarFrame.Size = UDim2.new(0, 400, 0, 60)
@@ -87,12 +88,11 @@ hotbarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 hotbarFrame.BackgroundTransparency = 0.5
 hotbarFrame.Parent = screenGui
 
--- Helper to create slots
 local function createSlot(i)
 	local slotFrame = Instance.new("Frame")
 	slotFrame.Name = "Slot" .. i
 	slotFrame.Size = UDim2.new(0, 45, 0, 45)
-	slotFrame.Position = UDim2.new(0, (i-1) * 46 + 4, 0.5, -22.5)
+	slotFrame.Position = UDim2.new(0, (i - 1) * 46 + 4, 0.5, -22.5)
 	slotFrame.BackgroundTransparency = 1
 	slotFrame.Parent = hotbarFrame
 
@@ -116,9 +116,9 @@ local function createSlot(i)
 	numLabel.Parent = slotFrame
 end
 
-for i = 1, 9 do createSlot(i) end
-
--- 3. Utility Functions
+for i = 1, 9 do
+	createSlot(i)
+end
 
 local function snapToGrid(pos)
 	return Vector3.new(
@@ -130,13 +130,17 @@ end
 
 local function getRayResult()
 	local origin = camera.CFrame.Position
-	-- Use Mouse location for ray to be accurate to where the user clicks
+
 	local mousePos = UserInputService:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
 
 	local filters = {}
-	if player.Character then table.insert(filters, player.Character) end
-	if previewPart then table.insert(filters, previewPart) end
+	if player.Character then
+		table.insert(filters, player.Character)
+	end
+	if previewPart then
+		table.insert(filters, previewPart)
+	end
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -148,13 +152,15 @@ end
 local function updateSelectedVisual()
 	for i = 1, 9 do
 		local slot = hotbarFrame:FindFirstChild("Slot" .. i)
-		if not slot then continue end
+		if not slot then
+			continue
+		end
 
-		-- Clear old selection stroke
 		local oldStroke = slot:FindFirstChild("SelectedStroke")
-		if oldStroke then oldStroke:Destroy() end
+		if oldStroke then
+			oldStroke:Destroy()
+		end
 
-		-- Update Item Display
 		local item = inventory[i]
 		local bg = slot.BG
 		local label = slot:FindFirstChild("ItemLabel")
@@ -165,7 +171,7 @@ local function updateSelectedVisual()
 			label.Size = UDim2.new(1, -10, 1, -10)
 			label.Position = UDim2.new(0, 5, 0, 5)
 			label.BackgroundTransparency = 1
-			label.TextColor3 = Color3.new(1,1,1)
+			label.TextColor3 = Color3.new(1, 1, 1)
 			label.TextScaled = true
 			label.Font = Enum.Font.GothamBold
 			label.TextXAlignment = Enum.TextXAlignment.Left
@@ -175,15 +181,14 @@ local function updateSelectedVisual()
 
 		if item and item.name then
 			local blockName = item.name
-			bg.BackgroundColor3 = BLOCK_DATA[blockName] and BLOCK_DATA[blockName].color or Color3.fromRGB(80,80,80)
+			bg.BackgroundColor3 = BLOCK_DATA[blockName] and BLOCK_DATA[blockName].color or Color3.fromRGB(80, 80, 80)
 			label.Text = blockName .. (item.count > 1 and "\n" .. item.count or "")
 		else
-			bg.BackgroundColor3 = Color3.fromRGB(50,50,50)
+			bg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 			label.Text = ""
 		end
 	end
 
-	-- Highlight new selection
 	local selSlot = hotbarFrame:FindFirstChild("Slot" .. selectedSlot)
 	if selSlot then
 		local stroke = Instance.new("UIStroke")
@@ -194,19 +199,15 @@ local function updateSelectedVisual()
 	end
 end
 
--- Update inventory UI initially
 updateSelectedVisual()
-
--- 4. Logic Loops (Preview, Breaking, Camera)
 
 local function updatePreviewAndBreakLogic()
 	local result = getRayResult()
 
 	if result then
 		local hitBlockPos = snapToGrid(result.Instance.Position)
-		lastHit = {pos = hitBlockPos, normal = result.Normal}
+		lastHit = { pos = hitBlockPos, normal = result.Normal }
 
-		-- 1. PREVIEW LOGIC
 		local selectedItem = inventory[selectedSlot]
 		local selectedBlockName = selectedItem and selectedItem.name
 
@@ -222,13 +223,14 @@ local function updatePreviewAndBreakLogic()
 				previewPart.Shape = Enum.PartType.Block
 				previewPart.Parent = workspace
 
-                 -- UN COMMENT IF YOU WANT A SELECTIONBOX AROUND THE BLOCK PREVIEW
-			--	local selectionBox = Instance.new("SelectionBox")
-			--	selectionBox.Adornee = previewPart
-			--	selectionBox.Color3 = Color3.fromRGB(0, 255, 255)
-			--	selectionBox.LineThickness = 0.05
-			--	selectionBox.Transparency = 0.5
-			--	selectionBox.Parent = previewPart
+				-- UN COMMENT IF YOU WANT A SELECTION BOX AROUND THE BLOCK PREVIEW
+
+				--	local selectionBox = Instance.new("SelectionBox")
+				--	selectionBox.Adornee = previewPart
+				--	selectionBox.Color3 = Color3.fromRGB(0, 255, 255)
+				--	selectionBox.LineThickness = 0.05
+				--	selectionBox.Transparency = 0.5
+				--	selectionBox.Parent = previewPart
 			end
 
 			previewPart.Transparency = 0.6
@@ -236,15 +238,12 @@ local function updatePreviewAndBreakLogic()
 			previewPart.Color = BLOCK_DATA[selectedBlockName].color
 			previewPart.Position = placePos
 		else
-			-- Item selected is not a block
 			if previewPart then
 				previewPart:Destroy()
 				previewPart = nil
 			end
 		end
 
-		-- 2. BREAKING LOGIC
-		-- Check if we are currently holding click on a breakable block
 		if breaking and breakTarget and hitBlockPos == breakTarget and BLOCK_DATA[result.Instance.Name] then
 			local hardness = BLOCK_DATA[result.Instance.Name].hardness
 			local progress = math.min((tick() - breakStartTime) / hardness, 1)
@@ -253,24 +252,19 @@ local function updatePreviewAndBreakLogic()
 			breakLabel.Text = string.format("Breaking %s (%.0f%%)", result.Instance.Name, progress * 100)
 
 			if progress >= 1 then
-				-- Broken!
 				breakRemote:FireServer(breakTarget)
 				breaking = false
 				breakTarget = nil
 				breakLabel.Visible = false
-				-- Optional: Update local inventory count here if needed
 			end
 		else
 			breakLabel.Visible = false
-			-- If we moved cursor off the target, stop breaking
 			if breaking then
 				breaking = false
 				breakTarget = nil
 			end
 		end
-
 	else
-		-- Raycast hit nothing
 		lastHit = nil
 		if previewPart then
 			previewPart:Destroy()
@@ -282,22 +276,21 @@ local function updatePreviewAndBreakLogic()
 	end
 end
 
--- Camera Logic (Free Mouse Look)
 local function updateCamera()
-	-- Crosshair Visibility
 	if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 		local rootPos = player.Character.HumanoidRootPart.Position
 		local camDist = (camera.CFrame.Position - rootPos).Magnitude
-		-- Show crosshair if First Person (<1 stud) OR if ShiftLocked
 		local isFirstPerson = (camDist < 1.5) or (player.CameraMode == Enum.CameraMode.LockFirstPerson)
 		crosshair.Visible = isFirstPerson
 	end
 
-	-- Mouse Drag Look Logic
-	if not mouseDown then return end
+	if not mouseDown then
+		return
+	end
 
-	-- Don't drag look if shift lock is on (standard roblox behavior takes over)
-	if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then return end
+	if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		return
+	end
 
 	local currentMousePos = UserInputService:GetMouseLocation()
 	if lastMousePos then
@@ -308,51 +301,51 @@ local function updateCamera()
 	lastMousePos = currentMousePos
 end
 
--- Run Loops
 RunService.RenderStepped:Connect(updateCamera)
 RunService.Heartbeat:Connect(updatePreviewAndBreakLogic)
 
--- 5. Input Handling
-
 local slotKeys = {
-	[Enum.KeyCode.One] = 1, [Enum.KeyCode.Two] = 2, [Enum.KeyCode.Three] = 3,
-	[Enum.KeyCode.Four] = 4, [Enum.KeyCode.Five] = 5, [Enum.KeyCode.Six] = 6,
-	[Enum.KeyCode.Seven] = 7, [Enum.KeyCode.Eight] = 8, [Enum.KeyCode.Nine] = 9
+	[Enum.KeyCode.One] = 1,
+	[Enum.KeyCode.Two] = 2,
+	[Enum.KeyCode.Three] = 3,
+	[Enum.KeyCode.Four] = 4,
+	[Enum.KeyCode.Five] = 5,
+	[Enum.KeyCode.Six] = 6,
+	[Enum.KeyCode.Seven] = 7,
+	[Enum.KeyCode.Eight] = 8,
+	[Enum.KeyCode.Nine] = 9,
 }
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
+	if gameProcessed then
+		return
+	end
 
-	-- Hotbar selection
 	if slotKeys[input.KeyCode] then
 		selectedSlot = slotKeys[input.KeyCode]
 		updateSelectedVisual()
 		return
 	end
 
-	-- Left Click (Break OR Camera Drag)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		local result = getRayResult()
 
-		-- If hitting a block we can break, start breaking
 		if result and result.Instance and BLOCK_DATA[result.Instance.Name] then
 			breakTarget = snapToGrid(result.Instance.Position)
 			breakStartTime = tick()
 			breaking = true
 		else
-			-- If NOT hitting a valid block, start Mouse Look Drag
 			mouseDown = true
 			lastMousePos = UserInputService:GetMouseLocation()
 			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
 		end
 	end
 
-	-- Right Click (Place)
 	if input.UserInputType == Enum.UserInputType.MouseButton2 then
 		local selectedItem = inventory[selectedSlot]
 		if selectedItem and selectedItem.name and lastHit then
 			local placePos = snapToGrid(lastHit.pos + lastHit.normal * BLOCK_SIZE)
-			-- Sending the block NAME (string) not the whole table
+
 			placeRemote:FireServer(selectedItem.name, placePos)
 		end
 	end
@@ -360,18 +353,15 @@ end)
 
 UserInputService.InputEnded:Connect(function(input, gameProcessed)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		-- Stop breaking
 		breaking = false
 		breakTarget = nil
 		breakLabel.Visible = false
 
-		-- Stop Mouse Look
 		mouseDown = false
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	end
 end)
 
--- Mouse Wheel Scroll
 mouse.WheelForward:Connect(function()
 	selectedSlot = selectedSlot == 1 and 9 or selectedSlot - 1
 	updateSelectedVisual()
@@ -382,7 +372,8 @@ mouse.WheelBackward:Connect(function()
 	updateSelectedVisual()
 end)
 
--- Cleanup on death
 player.CharacterRemoving:Connect(function()
-	if previewPart then previewPart:Destroy() end
+	if previewPart then
+		previewPart:Destroy()
+	end
 end)

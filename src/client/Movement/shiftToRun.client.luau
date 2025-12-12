@@ -16,10 +16,12 @@ end
 
 player.CharacterAdded:Connect(setupCharacter)
 
-local sprinting = false
+local _sprinting = false
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
+	if gameProcessedEvent then
+		return
+	end
 
 	if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
 		local character = player.Character
@@ -27,14 +29,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 			local humanoid = character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				humanoid.WalkSpeed = sprintSpeed
-				sprinting = true
+				_sprinting = true
 			end
 		end
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
+	if gameProcessedEvent then
+		return
+	end
 
 	if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
 		local character = player.Character
@@ -42,8 +46,7 @@ UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
 			local humanoid = character:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				humanoid.WalkSpeed = normalWalkSpeed
-				sprinting = false
-				print("Sprint stopped! Speed:", normalWalkSpeed)
+				_sprinting = false
 			end
 		end
 	end

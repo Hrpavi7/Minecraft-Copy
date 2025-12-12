@@ -1,1 +1,1 @@
-print("Hello World!")
+-- Module Script

@@ -1,13 +1,11 @@
--- 📦 COMPLETE MINECRAFT CRAFTING MENU + HOTBAR (Press E to toggle!)
--- FULL LocalScript for StarterPlayer > StarterPlayerScripts (name: "CraftingMenu")
--- ✅ 3x3 Crafting Grid + 6 BASIC RECIPES (Planks, Sticks, Crafting Table, Pickaxe, Sword, Axe)
--- ✅ Rotating Character Preview (ViewportFrame)
--- ✅ Hotbar with counts + selected highlight
--- ✅ Drag-free: Click hotbar → select → click grid to place 1 | Click grid to remove to inventory
--- ✅ Output auto-shows | Click to craft (consumes NOTHING extra - grid items already deducted)
--- ✅ ESC/X to close | Clears grid safely (returns items)
--- ✅ SHARED INVENTORY: Works with your BlockController (see bottom instructions)
--- ✅ Add "Planks", "Stick", etc to BLOCK_DATA for placing!
+--[[
+	Hi, if you're here, god knows why this works.
+	Warning: DO NOT TRY TO ORGANIZE THIS.
+	This is a terrible code, and I regretted making this.
+	put how much hours you wasted to a warning to the next guy who sees this:
+
+	total_wasted_hours_here: 6
+--]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -15,55 +13,64 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local camera = workspace.CurrentCamera
+local _camera = workspace.CurrentCamera
 
--- SHARED INVENTORY (9 slots hotbar) - _G for BlockController sync!
-_G.MyInventory = _G.MyInventory or {
-	{name = "Grass", count = 64},
-	{name = "Dirt", count = 64},
-	{name = "Stone", count = 32},
-	{name = "Wood", count = 16},
-	nil, nil, nil, nil, nil
-}
+_G.MyInventory = _G.MyInventory
+	or {
+		{ name = "Grass", count = 64 },
+		{ name = "Dirt", count = 64 },
+		{ name = "Stone", count = 32 },
+		{ name = "Wood", count = 16 },
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	}
 local inventory = _G.MyInventory
 
 local selectedSlot = 1
-local craftingGrid = {}  -- 1-9 temporary slots
+local craftingGrid = {}
 local MAX_STACK = 64
 
--- BLOCK DATA for colors/UI (add to your BlockController too!)
 local BLOCK_DATA = {
-	Grass = {color = Color3.fromRGB(102, 153, 0)},
-	Dirt = {color = Color3.fromRGB(139, 69, 19)},
-	Stone = {color = Color3.fromRGB(112, 112, 112)},
-	Wood = {color = Color3.fromRGB(162, 87, 0)},
-	Planks = {color = Color3.fromRGB(204, 142, 58)},
-	Stick = {color = Color3.fromRGB(160, 100, 60)},
-	CraftingTable = {color = Color3.fromRGB(120, 80, 40)},
-	Pickaxe = {color = Color3.fromRGB(150, 150, 150)},
-	Sword = {color = Color3.fromRGB(200, 200, 200)},
-	Axe = {color = Color3.fromRGB(180, 180, 180)},
+	Grass = { color = Color3.fromRGB(102, 153, 0) },
+	Dirt = { color = Color3.fromRGB(139, 69, 19) },
+	Stone = { color = Color3.fromRGB(112, 112, 112) },
+	Wood = { color = Color3.fromRGB(162, 87, 0) },
+	Planks = { color = Color3.fromRGB(204, 142, 58) },
+	Stick = { color = Color3.fromRGB(160, 100, 60) },
+	CraftingTable = { color = Color3.fromRGB(120, 80, 40) },
+	Pickaxe = { color = Color3.fromRGB(150, 150, 150) },
+	Sword = { color = Color3.fromRGB(200, 200, 200) },
+	Axe = { color = Color3.fromRGB(180, 180, 180) },
 }
 
--- RECIPES: {grid = {"Wood", "", "", "", "", "", "", "", ""}, output = {name="Planks", count=4}}
 local recipes = {
-	-- Planks (1 Wood anywhere)
-	{grid = {"Wood", "", "", "", "", "", "", "", ""}, output = {name = "Planks", count = 4}},
-	-- Sticks (2 Planks vertical)
-	{grid = {"", "", "", "Planks", "", "", "Planks", "", ""}, output = {name = "Stick", count = 4}},
-	-- Crafting Table (2x2 Planks top-left)
-	{grid = {"Planks", "Planks", "", "Planks", "Planks", "", "", "", ""}, output = {name = "CraftingTable", count = 1}},
-	-- Wooden Pickaxe (3 Planks top, 2 Sticks middle bottom)
-	{grid = {"Planks", "Planks", "Planks", "", "Stick", "", "", "Stick", ""}, output = {name = "Pickaxe", count = 1}},
-	-- Wooden Sword (1 Planks middle top, 1 Stick middle bottom)
-	{grid = {"", "Planks", "", "", "Stick", "", "", "", ""}, output = {name = "Sword", count = 1}},
-	-- Wooden Axe (3 Planks top-left/mid, 2 Sticks right column bottom)
-	{grid = {"Planks", "Planks", "", "Planks", "", "", "", "Stick", "Stick"}, output = {name = "Axe", count = 1}},
+	{ grid = { "Wood", "", "", "", "", "", "", "", "" }, output = { name = "Planks", count = 4 } },
+
+	{ grid = { "", "", "", "Planks", "", "", "Planks", "", "" }, output = { name = "Stick", count = 4 } },
+	{
+		grid = { "Planks", "Planks", "", "Planks", "Planks", "", "", "", "" },
+		output = { name = "CraftingTable", count = 1 },
+	},
+	{
+		grid = { "Planks", "Planks", "Planks", "", "Stick", "", "", "Stick", "" },
+		output = {
+			name = "Pickaxe",
+			count = 1,
+		},
+	},
+	{ grid = { "", "Planks", "", "", "Stick", "", "", "", "" }, output = { name = "Sword", count = 1 } },
+
+	{ grid = { "Planks", "Planks", "", "Planks", "", "", "", "Stick", "Stick" }, output = { name = "Axe", count = 1 } },
 }
 
 local function flattenGrid()
 	local flat = {}
-	for i = 1, 9 do flat[i] = craftingGrid[i] or "" end
+	for i = 1, 9 do
+		flat[i] = craftingGrid[i] or ""
+	end
 	return flat
 end
 
@@ -78,7 +85,9 @@ local function matchesRecipe(flat)
 				break
 			end
 		end
-		if match then return recipe.output end
+		if match then
+			return recipe.output
+		end
 	end
 	return nil
 end
@@ -91,16 +100,17 @@ local function addToInventory(name, count)
 			local add = math.min(count, MAX_STACK - slot.count)
 			slot.count += add
 			count -= add
-			if count <= 0 then return true end
+			if count <= 0 then
+				return true
+			end
 		elseif not slot then
-			inventory[i] = {name = name, count = math.min(count, MAX_STACK)}
+			inventory[i] = { name = name, count = math.min(count, MAX_STACK) }
 			return true
 		end
 	end
 	return false
 end
 
--- GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CraftingMenu"
 screenGui.ResetOnSpawn = false
@@ -118,7 +128,6 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = mainFrame
 
--- Title + Close
 local titleFrame = Instance.new("Frame")
 titleFrame.Size = UDim2.new(1, 0, 0, 50)
 titleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -140,7 +149,7 @@ closeBtn.Size = UDim2.new(0, 50, 0, 50)
 closeBtn.Position = UDim2.new(1, -55, 0, 0)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Parent = titleFrame
@@ -149,7 +158,6 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 8)
 closeCorner.Parent = closeBtn
 
--- Character Preview (Left)
 local viewportFrame = Instance.new("ViewportFrame")
 viewportFrame.Size = UDim2.new(0.28, 0, 0.65, 0)
 viewportFrame.Position = UDim2.new(0.02, 0, 0.12, 0)
@@ -162,38 +170,36 @@ viewportFrame.CurrentCamera = vpCamera
 
 local charClone = nil
 local rotationConn = nil
--- Corrected Code
 local function updateCharPreview()
-	-- 1. Cleanup existing elements
-	if charClone then charClone:Destroy() end
-	if rotationConn then rotationConn:Disconnect() end
+	if charClone then
+		charClone:Destroy()
+	end
+	if rotationConn then
+		rotationConn:Disconnect()
+	end
 
 	local char = player.Character
 
-	-- Check if character exists at all before attempting to clone
-	if not char then 
+	if not char then
 		charClone = nil
-		return 
+		return
 	end
 
-	-- 2. Use pcall for safer cloning (Cloning can sometimes error)
 	local success, result = pcall(function()
 		return char:Clone()
 	end)
 
 	if not success or not result then
-		-- Cloning failed, abort the function
 		warn("Failed to clone character for ViewportFrame.")
 		charClone = nil
 		return
 	end
 
 	charClone = result
-	charClone.Parent = viewportFrame -- LINE 180 (Now safely assigned)
+	charClone.Parent = viewportFrame
 
 	local root = charClone:FindFirstChild("HumanoidRootPart")
 
-	-- 3. Check Root Part existence before indexing
 	if root then
 		root.CFrame = CFrame.new(0, 0, 0)
 		for _, part in pairs(charClone:GetDescendants()) do
@@ -205,25 +211,23 @@ local function updateCharPreview()
 			end
 		end
 	else
-		-- If the character model is broken and has no HRP, destroy the clone and abort rotation.
 		charClone:Destroy()
 		charClone = nil
 		return
 	end
 
-	-- 4. Rotation connection
 	rotationConn = RunService.Heartbeat:Connect(function()
-		-- Ensure root still exists inside the loop
-		if root and root.Parent then 
+		if root and root.Parent then
 			root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(2), 0)
 		end
 	end)
 end
 
 player.CharacterAdded:Connect(updateCharPreview)
-if player.Character then updateCharPreview() end
+if player.Character then
+	updateCharPreview()
+end
 
--- Crafting Area (Middle Right)
 local craftFrame = Instance.new("Frame")
 craftFrame.Size = UDim2.new(0.35, 0, 0.55, 0)
 craftFrame.Position = UDim2.new(0.33, 0, 0.12, 0)
@@ -254,15 +258,14 @@ for i = 1, 9 do
 	slotLabel.Size = UDim2.new(1, 0, 1, 0)
 	slotLabel.BackgroundTransparency = 1
 	slotLabel.Text = ""
-	slotLabel.TextColor3 = Color3.new(1,1,1)
+	slotLabel.TextColor3 = Color3.new(1, 1, 1)
 	slotLabel.TextScaled = true
 	slotLabel.Font = Enum.Font.Gotham
 	slotLabel.Parent = slot
 
-	gridSlots[i] = {frame = slot, label = slotLabel}
+	gridSlots[i] = { frame = slot, label = slotLabel }
 end
 
--- Output Slot (Below Grid)
 local outputFrame = Instance.new("Frame")
 outputFrame.Size = UDim2.new(0, 70, 0, 70)
 outputFrame.Position = UDim2.new(0.33, 20, 0.68, 0)
@@ -278,12 +281,11 @@ local outputLabel = Instance.new("TextLabel")
 outputLabel.Size = UDim2.new(1, 0, 1, 0)
 outputLabel.BackgroundTransparency = 1
 outputLabel.Text = ""
-outputLabel.TextColor3 = Color3.new(1,1,1)
+outputLabel.TextColor3 = Color3.new(1, 1, 1)
 outputLabel.TextScaled = true
 outputLabel.Font = Enum.Font.GothamBold
 outputLabel.Parent = outputFrame
 
--- Hotbar (Bottom)
 local hotbarFrame = Instance.new("Frame")
 hotbarFrame.Size = UDim2.new(0.6, 0, 0, 70)
 hotbarFrame.Position = UDim2.new(0.2, 0, 0.8, 0)
@@ -317,7 +319,7 @@ for i = 1, 9 do
 	hLabel.Size = UDim2.new(1, -10, 1, -10)
 	hLabel.BackgroundTransparency = 1
 	hLabel.Text = ""
-	hLabel.TextColor3 = Color3.new(1,1,1)
+	hLabel.TextColor3 = Color3.new(1, 1, 1)
 	hLabel.TextScaled = true
 	hLabel.Font = Enum.Font.Gotham
 	hLabel.Parent = slot
@@ -328,12 +330,12 @@ for i = 1, 9 do
 	countLabel.Position = UDim2.new(1, -8, 1, -8)
 	countLabel.BackgroundTransparency = 1
 	countLabel.Text = ""
-	countLabel.TextColor3 = Color3.new(1,1,1)
+	countLabel.TextColor3 = Color3.new(1, 1, 1)
 	countLabel.TextScaled = true
 	countLabel.Font = Enum.Font.GothamBold
 	countLabel.Parent = slot
 
-	hotbarSlots[i] = {frame = slot, label = hLabel, count = countLabel}
+	hotbarSlots[i] = { frame = slot, label = hLabel, count = countLabel }
 end
 
 local function updateHotbarDisplay()
@@ -345,22 +347,23 @@ local function updateHotbarDisplay()
 		local countLbl = slotData.count
 
 		if item then
-			frame.BackgroundColor3 = BLOCK_DATA[item.name] and BLOCK_DATA[item.name].color or Color3.fromRGB(80,80,80)
+			frame.BackgroundColor3 = BLOCK_DATA[item.name] and BLOCK_DATA[item.name].color or Color3.fromRGB(80, 80, 80)
 			label.Text = item.name
 			countLbl.Text = item.count > 1 and tostring(item.count) or ""
 		else
-			frame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+			frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 			label.Text = ""
 			countLbl.Text = ""
 		end
 
-		-- Selected highlight
 		local stroke = frame:FindFirstChild("Selected")
-		if stroke then stroke:Destroy() end
+		if stroke then
+			stroke:Destroy()
+		end
 		if i == selectedSlot then
 			local stroke = Instance.new("UIStroke")
 			stroke.Name = "Selected"
-			stroke.Color = Color3.new(0,1,0)
+			stroke.Color = Color3.new(0, 1, 0)
 			stroke.Thickness = 4
 			stroke.Parent = frame
 		end
@@ -371,25 +374,24 @@ local function updateCraftingDisplay()
 	local flat = flattenGrid()
 	local outputItem = matchesRecipe(flat)
 
-	-- Grid
 	for i = 1, 9 do
 		local slotData = gridSlots[i]
 		local name = craftingGrid[i]
 		if name then
-			slotData.frame.BackgroundColor3 = BLOCK_DATA[name] and BLOCK_DATA[name].color or Color3.fromRGB(80,80,80)
+			slotData.frame.BackgroundColor3 = BLOCK_DATA[name] and BLOCK_DATA[name].color or Color3.fromRGB(80, 80, 80)
 			slotData.label.Text = name
 		else
-			slotData.frame.BackgroundColor3 = Color3.fromRGB(70,70,70)
+			slotData.frame.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 			slotData.label.Text = ""
 		end
 	end
 
-	-- Output
 	if outputItem then
-		outputFrame.BackgroundColor3 = BLOCK_DATA[outputItem.name] and BLOCK_DATA[outputItem.name].color or Color3.fromRGB(100,100,100)
+		outputFrame.BackgroundColor3 = BLOCK_DATA[outputItem.name] and BLOCK_DATA[outputItem.name].color
+			or Color3.fromRGB(100, 100, 100)
 		outputLabel.Text = outputItem.name .. "\nx" .. outputItem.count
 	else
-		outputFrame.BackgroundColor3 = Color3.fromRGB(90,90,90)
+		outputFrame.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
 		outputLabel.Text = ""
 	end
 end
@@ -404,40 +406,57 @@ local function clearCraftingGrid()
 	updateCraftingDisplay()
 end
 
--- Connections
 local menuOpen = false
 
 local function toggleMenu()
 	menuOpen = not menuOpen
 	mainFrame.Visible = menuOpen
 	if menuOpen then
-		for i=1,9 do craftingGrid[i] = nil end
+		for i = 1, 9 do
+			craftingGrid[i] = nil
+		end
 		updateCharPreview()
 		updateHotbarDisplay()
 		updateCraftingDisplay()
 		UserInputService.MouseIconEnabled = true
 	else
 		clearCraftingGrid()
-		UserInputService.MouseIconEnabled = false  -- Hide cursor outside
+		UserInputService.MouseIconEnabled = false -- Hide cursor outside
 	end
 end
 
 closeBtn.MouseButton1Click:Connect(toggleMenu)
 
 UserInputService.InputBegan:Connect(function(input, gp)
-	if gp then return end
+	if gp then
+		return
+	end
 	if input.KeyCode == Enum.KeyCode.E or input.KeyCode == Enum.KeyCode.Escape then
 		toggleMenu()
-	elseif input.KeyCode.Name:match("One") then selectedSlot = 1
-	elseif input.KeyCode.Name:match("Two") then selectedSlot = 2
-		-- ... add for 3-9 if want
+	elseif input.KeyCode.Name:match("One") then
+		selectedSlot = 1
+	elseif input.KeyCode.Name:match("Two") then
+		selectedSlot = 2
+	elseif input.KeyCode.Name:match("Three") then
+		selectedSlot = 3
+	elseif input.KeyCode.Name:match("Four") then
+		selectedSlot = 4
+	elseif input.KeyCode.Name:match("Five") then
+		selectedSlot = 5
+	elseif input.KeyCode.Name:match("Six") then
+		selectedSlot = 6
+	elseif input.KeyCode.Name:match("Seven") then
+		selectedSlot = 7
+	elseif input.KeyCode.Name:match("Eight") then
+		selectedSlot = 8
+	elseif input.KeyCode.Name:match("Nine") then
+		selectedSlot = 9
 	end
 	if menuOpen then
 		updateHotbarDisplay()
 	end
 end)
 
--- Hotbar clicks
 for i = 1, 9 do
 	hotbarSlots[i].frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and menuOpen then
@@ -447,19 +466,18 @@ for i = 1, 9 do
 	end)
 end
 
--- Grid clicks
 for i = 1, 9 do
 	gridSlots[i].frame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and menuOpen then
 			local selItem = inventory[selectedSlot]
 			if selItem and selItem.count > 0 and not craftingGrid[i] then
-				-- Place
 				craftingGrid[i] = selItem.name
 				selItem.count -= 1
-				if selItem.count == 0 then inventory[selectedSlot] = nil end
+				if selItem.count == 0 then
+					inventory[selectedSlot] = nil
+				end
 				updateHotbarDisplay()
 			elseif craftingGrid[i] then
-				-- Remove back to inv
 				addToInventory(craftingGrid[i])
 				craftingGrid[i] = nil
 			end
@@ -468,13 +486,12 @@ for i = 1, 9 do
 	end)
 end
 
--- Output click
 outputFrame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and menuOpen then
 		local outputItem = matchesRecipe(flattenGrid())
 		if outputItem then
 			addToInventory(outputItem.name, outputItem.count)
-			clearCraftingGrid()  -- Clears & returns nothing since consumed
+			clearCraftingGrid()
 			updateHotbarDisplay()
 		end
 	end

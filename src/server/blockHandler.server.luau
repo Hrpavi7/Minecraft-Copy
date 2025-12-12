@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Remotes
 local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 remotesFolder.Name = "Remotes"
 remotesFolder.Parent = ReplicatedStorage
@@ -13,19 +12,17 @@ local placeRemote = remotesFolder:FindFirstChild("PlaceBlock") or Instance.new("
 placeRemote.Name = "PlaceBlock"
 placeRemote.Parent = remotesFolder
 
--- Block data (add more here!)
 local BLOCK_DATA = {
-	Grass = {material = Enum.Material.Grass, color = Color3.fromRGB(102, 153, 0)},
-	Dirt = {material = Enum.Material.Mud, color = Color3.fromRGB(139, 69, 19)},
-	Stone = {material = Enum.Material.Rock, color = Color3.fromRGB(112, 112, 112)},
-	Wood = {material = Enum.Material.Wood, color = Color3.fromRGB(162, 87, 0)},
+	Grass = { material = Enum.Material.Grass, color = Color3.fromRGB(102, 153, 0) },
+	Dirt = { material = Enum.Material.Mud, color = Color3.fromRGB(139, 69, 19) },
+	Stone = { material = Enum.Material.Rock, color = Color3.fromRGB(112, 112, 112) },
+	Wood = { material = Enum.Material.Wood, color = Color3.fromRGB(162, 87, 0) },
 }
 
 local blocksFolder = ReplicatedStorage:FindFirstChild("Blocks") or Instance.new("Folder")
 blocksFolder.Name = "Blocks"
 blocksFolder.Parent = ReplicatedStorage
 
--- Auto-create block templates
 for name, data in pairs(BLOCK_DATA) do
 	if not blocksFolder:FindFirstChild(name) then
 		local block = Instance.new("Part")
@@ -60,7 +57,6 @@ local function findBlockAtPos(pos)
 	return nil
 end
 
--- Preview cleanup (prevents lag/replication)
 spawn(function()
 	while true do
 		wait(0.3)
@@ -74,20 +70,34 @@ end)
 
 breakRemote.OnServerEvent:Connect(function(player, targetPos)
 	local char = player.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	if (char.HumanoidRootPart.Position - targetPos).Magnitude > MAX_DISTANCE then return end
+	if not char or not char:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+	if (char.HumanoidRootPart.Position - targetPos).Magnitude > MAX_DISTANCE then
+		return
+	end
 
 	local block = findBlockAtPos(targetPos)
-	if block then block:Destroy() end
+	if block then
+		block:Destroy()
+	end
 end)
 
 placeRemote.OnServerEvent:Connect(function(player, blockName, placePos)
 	local char = player.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	if (char.HumanoidRootPart.Position - placePos).Magnitude > MAX_DISTANCE then return end
+	if not char or not char:FindFirstChild("HumanoidRootPart") then
+		return
+	end
+	if (char.HumanoidRootPart.Position - placePos).Magnitude > MAX_DISTANCE then
+		return
+	end
 
-	if not BLOCK_DATA[blockName] then return end
-	if findBlockAtPos(placePos) then return end -- No overlap
+	if not BLOCK_DATA[blockName] then
+		return
+	end
+	if findBlockAtPos(placePos) then
+		return
+	end
 
 	local block = blocksFolder[blockName]:Clone()
 	block.Position = placePos
